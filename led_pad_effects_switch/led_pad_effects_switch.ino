@@ -13,12 +13,12 @@ const int buttonPin = 2;
 
 const int customColorsCount = 6;
 Color customColors[customColorsCount] = {
-  {r: 255, g: 100, b: 40},
-  {r: 150, g: 255, b: 50},
-  {r: 210, g: 200, b: 10},
-  {r: 200, g: 100, b: 0},
-  {r: 255, g: 200, b: 200},
-  {r: 230, g: 50, b: 255}
+  { r: 255, g: 100, b: 40 },
+  { r: 150, g: 255, b: 50 },
+  { r: 210, g: 200, b: 10 },
+  { r: 200, g: 100, b: 0 },
+  { r: 255, g: 200, b: 200 },
+  { r: 230, g: 50, b: 255 }
 };
 
 const int effectsCount = customColorsCount + 2;
@@ -57,7 +57,7 @@ void loop() {
     writeLed(false);
     delay(100);
     currentEffect = (currentEffect + 1) % effectsCount;
-    Serial.print("currentEffect = "); 
+    Serial.print("currentEffect = ");
     Serial.println(currentEffect);
   }
 
@@ -82,8 +82,14 @@ void setColorFromSerial() {
     int g = Serial.parseInt();
     int b = Serial.parseInt();
     Serial.parseInt();
-    Serial.print("writeLed1({r: "); Serial.print(r); Serial.print(", g: "); Serial.print(g); Serial.print(", b: "); Serial.print(b); Serial.println("});");
-    writeLed1({r: r, g: g, b: b});
+    Serial.print("writeLed1({r: ");
+    Serial.print(r);
+    Serial.print(", g: ");
+    Serial.print(g);
+    Serial.print(", b: ");
+    Serial.print(b);
+    Serial.println("});");
+    writeLed1({ r: r, g: g, b: b });
   }
 }
 
