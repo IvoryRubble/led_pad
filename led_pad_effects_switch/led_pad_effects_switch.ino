@@ -11,6 +11,16 @@ const int ledG2Pin = 10;
 const int ledB2Pin = 11;
 const int buttonPin = 2;
 
+const int defaultColorsCount = 6;
+Color defaultColors[defaultColorsCount] = {
+  { r: 255, g: 0, b: 0 },
+  { r: 0, g: 255, b: 0 },
+  { r: 0, g: 0, b: 255 },
+  { r: 255, g: 255, b: 0 },
+  { r: 255, g: 0, b: 255 },
+  { r: 0, g: 255, b: 255 }
+};
+
 const int customColorsCount = 6;
 Color customColors[customColorsCount] = {
   { r: 255, g: 100, b: 40 },
@@ -21,7 +31,7 @@ Color customColors[customColorsCount] = {
   { r: 230, g: 50, b: 255 }
 };
 
-const int effectsCount = customColorsCount + 2;
+const int effectsCount = defaultColorsCount + customColorsCount + 2;
 int currentEffect = 0;
 
 void setup() {
@@ -52,25 +62,35 @@ void loop() {
   bool isSerialCommandRecieved = readSerial();
 
   if (isButtonPressed || isSerialCommandRecieved) {
+    delay(100);
     writeLed(true);
-    delay(200);
+    writeLed1({ r: 255, g: 255, b: 255 });
+    writeLed2({ r: 255, g: 255, b: 255 });
+    delay(100);
     writeLed(false);
+    writeLed1({ r: 0, g: 0, b: 0 });
+    writeLed2({ r: 0, g: 0, b: 0 });
     delay(100);
     currentEffect = (currentEffect + 1) % effectsCount;
     Serial.print("currentEffect = ");
     Serial.println(currentEffect);
   }
 
-  if (currentEffect >= 0 && currentEffect < customColorsCount) {
-    writeLed1(customColors[currentEffect]);
-    writeLed2(customColors[currentEffect]);
+  if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
+    writeLed1(defaultColors[currentEffect]);
+    writeLed2(defaultColors[currentEffect]);
+  }
+
+  if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
+    writeLed1(customColors[currentEffect - defaultColorsCount]);
+    writeLed2(customColors[currentEffect - defaultColorsCount]);
   }
 
   switch (currentEffect) {
-    case customColorsCount:
+    case defaultColorsCount + customColorsCount:
       effect0();
       break;
-    case customColorsCount + 1:
+    case defaultColorsCount + customColorsCount + 1:
       effect1();
       break;
   }
