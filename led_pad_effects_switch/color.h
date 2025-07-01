@@ -9,6 +9,15 @@ struct Color {
   int b;
 };
 
+struct ColorHSV {
+  int h;
+  int s;
+  int v;
+	float hF() { return mapf(h, 0, 360, 0, 1); }
+	float sF() { return mapf(s, 0, 100, 0, 1); }
+	float sV() { return mapf(s, 0, 100, 0, 1); }
+};
+
 Color hsvToRgb(float h, float s, float v) {
 	float r = 0, g = 0, b = 0;
 	

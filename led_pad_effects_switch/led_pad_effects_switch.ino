@@ -75,7 +75,7 @@ void loop() {
     Serial.print("currentEffect = ");
     Serial.println(currentEffect);
   }
-
+  
   if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
     writeLed1(defaultColors[currentEffect]);
     writeLed2(defaultColors[currentEffect]);
@@ -143,12 +143,53 @@ void writeLed2(Color c) {
   analogWrite(ledB2Pin, 255 - c.b);
 }
 
-void effect0() {
-  const unsigned long effectDuration = 5000;
-  unsigned long currentTime = millis() % effectDuration;
+float rainbowEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset) {
+  currentTime = currentTime % effectDuration;
+  float effectTime = effectDuration > 0 ? (float)currentTime / effectDuration : 0;
+  effectTime = effectTime + effectOffset;
+  effectTime = effectTime - floor(effectTime);
+  
+  float effectHue = effectTime;
+  return effectHue;
+}
 
-  float led1Hue = mapf(currentTime, 0, effectDuration, 0, 1);
-  float led2Hue = led1Hue;
+float breathEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset, float breathDeep, float valueMin, float valueMax) {
+  currentTime = currentTime % effectDuration;
+  float effectTime = effectDuration > 0 ? (float)currentTime / effectDuration : 0;
+  effectTime = effectTime + effectOffset;
+  effectTime = effectTime - floor(effectTime);
+
+  float effectValue = 1;
+  for (int i = 0; i < breathDeep; i++) {
+    effectValue = breathX(effectTime);
+  }
+  effectValue = mapf(effectValue, 0, 1, valueMin, valueMax);
+  return effectValue;
+}
+
+float breathX(float input) {
+  if (input < 0.5) {
+    float output = 2 * input;  
+    return output;
+  } else {
+    float output = 2 * (1 - input);
+    return output;
+  }
+}
+
+void breath0() {
+  float effectValue = breathEffect(millis(), 8000, 0, 4, 0.1, 1);
+
+  Color led1Value = hsvToRgb(0.25, 1, effectValue);
+  Color led2Value = led1Value;
+  
+  writeLed1(led1Value);
+  writeLed2(led2Value);
+}
+
+void effect0() {
+  float led1Hue = rainbowEffect(millis(), 5000, 0);
+  float led2Hue = led1Hue; 
   Color led1Value = hsvToRgb(led1Hue, 1, 1);
   Color led2Value = hsvToRgb(led2Hue, 1, 1);
 
@@ -157,12 +198,8 @@ void effect0() {
 }
 
 void effect1() {
-  const unsigned long effectDuration = 5000;
-  unsigned long currentTime = millis() % effectDuration;
-
-  float led1Hue = mapf(currentTime, 0, effectDuration, 0, 1);
-  float led2Hue = led1Hue + 0.5;
-  led2Hue = led2Hue - floor(led2Hue);
+  float led1Hue = rainbowEffect(millis(), 5000, 0);
+  float led2Hue = rainbowEffect(millis(), 5000, 0.5);
   Color led1Value = hsvToRgb(led1Hue, 1, 1);
   Color led2Value = hsvToRgb(led2Hue, 1, 1);
 
