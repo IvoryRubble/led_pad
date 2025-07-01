@@ -30,8 +30,8 @@ ColorHSV customColorsHSV[customColorsCount] = {
   { h: 293, s: 80, v: 100 }
 };
 
-const int effectsCount = defaultColorsCount + customColorsCount + 2;
-int currentEffect = 0;
+const int effectsCount = defaultColorsCount + customColorsCount + 10;
+int currentEffect = defaultColorsCount + customColorsCount + 9;
 
 void setup() {
   Serial.begin(115200);
@@ -54,6 +54,22 @@ void setup() {
   digitalWrite(ledB2Pin, HIGH);
 
   pinMode(buttonPin, INPUT_PULLUP);
+
+  writeLed1({ r: 255, g: 0, b: 0 });
+  writeLed2({ r: 255, g: 0, b: 0 });
+  delay(500);
+  writeLed1({ r: 0, g: 255, b: 0 });
+  writeLed2({ r: 0, g: 255, b: 0 });
+  delay(500);
+  writeLed1({ r: 0, g: 0, b: 255 });
+  writeLed2({ r: 0, g: 0, b: 255 });
+  delay(500);
+  writeLed1({ r: 255, g: 255, b: 255 });
+  writeLed2({ r: 255, g: 255, b: 255 });
+  delay(500);
+  writeLed1({ r: 0, g: 0, b: 0 });
+  writeLed2({ r: 0, g: 0, b: 0 });
+  delay(500);
 }
 
 void loop() {
@@ -65,7 +81,7 @@ void loop() {
     writeLed(true);
     writeLed1({ r: 255, g: 255, b: 255 });
     writeLed2({ r: 255, g: 255, b: 255 });
-    delay(100);
+    delay(5);
     writeLed(false);
     writeLed1({ r: 0, g: 0, b: 0 });
     writeLed2({ r: 0, g: 0, b: 0 });
@@ -76,19 +92,43 @@ void loop() {
   }
 
   if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
-    constColorEffect(defaultColorsHSV[currentEffect]);
+    constColorBreathEffect(defaultColorsHSV[currentEffect]);
   }
 
   if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
-    constColorEffect(customColorsHSV[currentEffect - defaultColorsCount]);
+    constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount]);
   }
 
   switch (currentEffect) {
     case defaultColorsCount + customColorsCount:
-      effect0();
+      rainbowEffect(0.7);
       break;
     case defaultColorsCount + customColorsCount + 1:
-      effect1();
+      rainbowEffect(1);
+      break;
+    case defaultColorsCount + customColorsCount + 2:
+      rainbowBreathEffect(0.7);
+      break;
+    case defaultColorsCount + customColorsCount + 3:
+      rainbowBreathEffect(1);
+      break;
+    case defaultColorsCount + customColorsCount + 4:
+      rainbowTwoColorsEffect(0.2, 1);
+      break;
+    case defaultColorsCount + customColorsCount + 5:
+      rainbowTwoColorsEffect(0.5, 1);
+      break;
+    case defaultColorsCount + customColorsCount + 6:
+      rainbowBreathTwoColorsEffect(0.2, 1);
+      break;
+    case defaultColorsCount + customColorsCount + 7:
+      rainbowBreathTwoColorsEffect(0.5, 1);
+      break;
+    case defaultColorsCount + customColorsCount + 8:
+      rainbowTwoColorsAperiodicEffect(1);
+      break;
+    case defaultColorsCount + customColorsCount + 9:
+      rainbowBreathTwoColorsAperiodicEffect(1);
       break;
   }
 }
@@ -180,32 +220,63 @@ void constColorEffect(ColorHSV c) {
   writeLed2(ledValue);
 }
 
-void breath0() {
-  float effectValue = breathEffect(millis(), 8000, 0, 4, 0.1, 1);
+void constColorBreathEffect(ColorHSV c) {
+  float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1 * c.vF(), c.vF());
+  Color ledValue = hsvToRgb(c.hF(), c.sF(), effectValue);
+  writeLed1(ledValue);
+  writeLed2(ledValue);
+}
 
-  Color led1Value = hsvToRgb(0.25, 1, effectValue);
-  Color led2Value = led1Value;
-  
+void rainbowEffect(float saturation) {
+  float ledHue = rainbowEffect(millis(), 60000, 0);
+  Color ledValue = hsvToRgb(ledHue, saturation, 1);
+  writeLed1(ledValue);
+  writeLed2(ledValue);
+}
+
+void rainbowTwoColorsEffect(float effectOffset, float saturation) {
+  float led1Hue = rainbowEffect(millis(), 60000, 0);
+  float led2Hue = rainbowEffect(millis(), 60000, effectOffset);
+  Color led1Value = hsvToRgb(led1Hue, saturation, 1);
+  Color led2Value = hsvToRgb(led2Hue, saturation, 1);
   writeLed1(led1Value);
   writeLed2(led2Value);
 }
 
-void effect0() {
-  float led1Hue = rainbowEffect(millis(), 5000, 0);
-  float led2Hue = led1Hue; 
-  Color led1Value = hsvToRgb(led1Hue, 1, 1);
-  Color led2Value = hsvToRgb(led2Hue, 1, 1);
-
+void rainbowTwoColorsAperiodicEffect(float saturation) {
+  float led1Hue = rainbowEffect(millis(), 60000, 0);
+  float led2Hue = rainbowEffect(millis(), 53000, 0);
+  Color led1Value = hsvToRgb(led1Hue, saturation, 1);
+  Color led2Value = hsvToRgb(led2Hue, saturation, 1);
   writeLed1(led1Value);
   writeLed2(led2Value);
 }
 
-void effect1() {
-  float led1Hue = rainbowEffect(millis(), 5000, 0);
-  float led2Hue = rainbowEffect(millis(), 5000, 0.5);
-  Color led1Value = hsvToRgb(led1Hue, 1, 1);
-  Color led2Value = hsvToRgb(led2Hue, 1, 1);
+void rainbowBreathEffect(float saturation) {
+  float ledHue = rainbowEffect(millis(), 60000, 0);
+  float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1, 1);
+  Color ledValue = hsvToRgb(ledHue, saturation, effectValue);
+  writeLed1(ledValue);
+  writeLed2(ledValue);
+}
 
+void rainbowBreathTwoColorsEffect(float effectOffset, float saturation) {
+  float led1Hue = rainbowEffect(millis(), 60000, 0);
+  float led2Hue = rainbowEffect(millis(), 60000, effectOffset);
+  float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1, 1);
+  Color led1Value = hsvToRgb(led1Hue, saturation, effectValue);
+  Color led2Value = hsvToRgb(led2Hue, saturation, effectValue);
+  writeLed1(led1Value);
+  writeLed2(led2Value);
+}
+
+void rainbowBreathTwoColorsAperiodicEffect(float saturation) {
+  float led1Hue = rainbowEffect(millis(), 60000, 0);
+  float led2Hue = rainbowEffect(millis(), 53000, 0);
+  float effect1Value = breathEffect(millis(), 8000, 0, 2, 0.1, 1);
+  float effect2Value = breathEffect(millis(), 7900, 0, 2, 0.1, 1);
+  Color led1Value = hsvToRgb(led1Hue, saturation, effect1Value);
+  Color led2Value = hsvToRgb(led2Hue, saturation, effect2Value);
   writeLed1(led1Value);
   writeLed2(led2Value);
 }
