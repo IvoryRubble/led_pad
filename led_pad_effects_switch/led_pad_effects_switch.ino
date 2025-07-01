@@ -12,23 +12,22 @@ const int ledB2Pin = 11;
 const int buttonPin = 2;
 
 const int defaultColorsCount = 6;
-Color defaultColors[defaultColorsCount] = {
-  { r: 255, g: 0, b: 0 },
-  { r: 0, g: 255, b: 0 },
-  { r: 0, g: 0, b: 255 },
-  { r: 255, g: 255, b: 0 },
-  { r: 255, g: 0, b: 255 },
-  { r: 0, g: 255, b: 255 }
+ColorHSV defaultColorsHSV[defaultColorsCount] = {
+  { h: 0, s: 100, v: 100 },
+  { h: 120, s: 100, v: 100 },
+  { h: 240, s: 100, v: 100 },
+  { h: 60, s: 100, v: 100 },
+  { h: 300, s: 100, v: 100 },
+  { h: 180, s: 100, v: 100 }
 };
 
-const int customColorsCount = 6;
-Color customColors[customColorsCount] = {
-  { r: 255, g: 100, b: 40 },
-  { r: 150, g: 255, b: 50 },
-  { r: 210, g: 200, b: 10 },
-  { r: 200, g: 100, b: 0 },
-  { r: 255, g: 200, b: 200 },
-  { r: 230, g: 50, b: 255 }
+const int customColorsCount = 5;
+ColorHSV customColorsHSV[customColorsCount] = {
+  { h: 17, s: 84, v: 100 },
+  { h: 90, s: 80, v: 100 },
+  { h: 57, s: 95, v: 100 },
+  { h: 0, s: 22, v: 100 },
+  { h: 293, s: 80, v: 100 }
 };
 
 const int effectsCount = defaultColorsCount + customColorsCount + 2;
@@ -75,15 +74,13 @@ void loop() {
     Serial.print("currentEffect = ");
     Serial.println(currentEffect);
   }
-  
+
   if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
-    writeLed1(defaultColors[currentEffect]);
-    writeLed2(defaultColors[currentEffect]);
+    constColorEffect(defaultColorsHSV[currentEffect]);
   }
 
   if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
-    writeLed1(customColors[currentEffect - defaultColorsCount]);
-    writeLed2(customColors[currentEffect - defaultColorsCount]);
+    constColorEffect(customColorsHSV[currentEffect - defaultColorsCount]);
   }
 
   switch (currentEffect) {
@@ -175,6 +172,12 @@ float breathX(float input) {
     float output = 2 * (1 - input);
     return output;
   }
+}
+
+void constColorEffect(ColorHSV c) {
+  Color ledValue = hsvToRgb(c.hF(), c.sF(), c.vF());
+  writeLed1(ledValue);
+  writeLed2(ledValue);
 }
 
 void breath0() {
