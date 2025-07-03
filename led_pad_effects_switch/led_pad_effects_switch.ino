@@ -1,14 +1,15 @@
+#include <SoftPWM.h>
 #include <math.h>
 #include "mapf.h"
 #include "color.h"
 
 const int ledPin = 12;
 const int ledR1Pin = 3;
-const int ledG1Pin = 5;
-const int ledB1Pin = 6;
-const int ledR2Pin = 9;
-const int ledG2Pin = 10;
-const int ledB2Pin = 11;
+const int ledG1Pin = 4;
+const int ledB1Pin = 5;
+const int ledR2Pin = 8;
+const int ledG2Pin = 9;
+const int ledB2Pin = 10;
 const int buttonPin = 2;
 
 const int defaultColorsCount = 6;
@@ -37,21 +38,17 @@ void setup() {
   Serial.begin(115200);
   delay(2000);
 
+  SoftPWMBegin(SOFTPWM_INVERTED);
+
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 
-  pinMode(ledR1Pin, OUTPUT);
-  digitalWrite(ledR1Pin, HIGH);
-  pinMode(ledG1Pin, OUTPUT);
-  digitalWrite(ledG1Pin, HIGH);
-  pinMode(ledB1Pin, OUTPUT);
-  digitalWrite(ledB1Pin, HIGH);
-  pinMode(ledR2Pin, OUTPUT);
-  digitalWrite(ledR2Pin, HIGH);
-  pinMode(ledG2Pin, OUTPUT);
-  digitalWrite(ledG2Pin, HIGH);
-  pinMode(ledB2Pin, OUTPUT);
-  digitalWrite(ledB2Pin, HIGH);
+  SoftPWMSet(ledR1Pin, 0);
+  SoftPWMSet(ledG1Pin, 0);
+  SoftPWMSet(ledB1Pin, 0);
+  SoftPWMSet(ledR2Pin, 0);
+  SoftPWMSet(ledG2Pin, 0);
+  SoftPWMSet(ledB2Pin, 0);
 
   pinMode(buttonPin, INPUT_PULLUP);
 
@@ -131,6 +128,8 @@ void loop() {
       rainbowBreathTwoColorsAperiodicEffect(1);
       break;
   }
+
+  delay(5);
 }
 
 void setColorFromSerial() {
@@ -169,15 +168,15 @@ void writeLed(bool isLedOn) {
 }
 
 void writeLed1(Color c) {
-  analogWrite(ledR1Pin, 255 - c.r);
-  analogWrite(ledG1Pin, 255 - c.g);
-  analogWrite(ledB1Pin, 255 - c.b);
+  SoftPWMSet(ledR1Pin, c.r);
+  SoftPWMSet(ledG1Pin, c.g);
+  SoftPWMSet(ledB1Pin, c.b);
 }
 
 void writeLed2(Color c) {
-  analogWrite(ledR2Pin, 255 - c.r);
-  analogWrite(ledG2Pin, 255 - c.g);
-  analogWrite(ledB2Pin, 255 - c.b);
+  SoftPWMSet(ledR2Pin, c.r);
+  SoftPWMSet(ledG2Pin, c.g);
+  SoftPWMSet(ledB2Pin, c.b);
 }
 
 float rainbowEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset) {
