@@ -15,6 +15,11 @@ struct CurrentEffectData {
 
 int currentEffectDataAddress = 8;
 
+struct SerialResponse {
+  bool changeEffect = false;
+  bool showNotification = false;
+};
+
 const int ledPin = 12;
 const int ledR1Pin = 3;
 const int ledG1Pin = 4;
@@ -93,14 +98,17 @@ void setup() {
 
 void loop() {
   bool isButtonPressed = readButton();
-  bool isSerialCommandRecieved = readSerial();
+  SerialResponse serialResponse = readSerial();
 
-  if (isButtonPressed || isSerialCommandRecieved) {
+  if (isButtonPressed || serialResponse.changeEffect) {
+    writeLed(false);
+    writeLed1({ r: 0, g: 0, b: 0 });
+    writeLed2({ r: 0, g: 0, b: 0 });
     delay(100);
     writeLed(true);
     writeLed1({ r: 255, g: 255, b: 255 });
     writeLed2({ r: 255, g: 255, b: 255 });
-    delay(5);
+    delay(50);
     writeLed(false);
     writeLed1({ r: 0, g: 0, b: 0 });
     writeLed2({ r: 0, g: 0, b: 0 });
@@ -115,6 +123,21 @@ void loop() {
 
     Serial.print("currentEffect = ");
     Serial.println(currentEffect);
+  }
+
+  if (serialResponse.showNotification) {
+    writeLed(true);
+    writeLed1({ r: 255, g: 255, b: 255 });
+    writeLed2({ r: 255, g: 255, b: 255 });
+    delay(100);
+    writeLed(false);
+    writeLed1({ r: 0, g: 0, b: 0 });
+    writeLed2({ r: 0, g: 0, b: 0 });
+    delay(100);
+    writeLed(true);
+    writeLed1({ r: 255, g: 255, b: 255 });
+    writeLed2({ r: 255, g: 255, b: 255 });
+    delay(100);
   }
 
   if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
@@ -178,13 +201,23 @@ void setColorFromSerial() {
   }
 }
 
-bool readSerial() {
-  bool isSerialCommandRecieved = false;
-  while (Serial.available()) {
-    Serial.read();
-    isSerialCommandRecieved = true;
+SerialResponse readSerial() {
+  SerialResponse response;
+  if (Serial.available()) {
+    int serialInput = Serial.read();
+    if (serialInput == 'e') {
+      Serial.println('e');
+    } else if (serialInput == 'o') {
+      response.showNotification = true;
+    } else {
+      response.changeEffect = true;
+    }
+
+    if (Serial.available()) {
+      Serial.read();
+    }
   }
-  return isSerialCommandRecieved;
+  return response;
 }
 
 bool readButton() {
