@@ -1,7 +1,19 @@
+#include <EEPROM.h>
 #include <SoftPWM.h>
 #include <math.h>
 #include "mapf.h"
 #include "color.h"
+
+struct CurrentEffectData {
+  int currentEffect;
+  int hash;
+
+  void initHash() { hash = getHash(); }
+  bool isHashValid() { return getHash() == hash; }
+  int getHash() { return 12 + currentEffect; }
+};
+
+int currentEffectDataAddress = 8;
 
 const int ledPin = 12;
 const int ledR1Pin = 3;
@@ -37,6 +49,16 @@ int currentEffect = defaultColorsCount + customColorsCount + 9;
 void setup() {
   Serial.begin(115200);
   delay(2000);
+  Serial.println("Begin...");
+
+  struct CurrentEffectData currentEffectData;
+  EEPROM.get(currentEffectDataAddress, currentEffectData);
+  if (currentEffectData.isHashValid()) {
+    currentEffect = currentEffectData.currentEffect;
+  }
+
+  Serial.print("currentEffect = ");
+  Serial.println(currentEffect);
 
   SoftPWMBegin(SOFTPWM_INVERTED);
 
@@ -83,7 +105,14 @@ void loop() {
     writeLed1({ r: 0, g: 0, b: 0 });
     writeLed2({ r: 0, g: 0, b: 0 });
     delay(100);
+    
     currentEffect = (currentEffect + 1) % effectsCount;
+    
+    struct CurrentEffectData currentEffectData;
+    currentEffectData.currentEffect = currentEffect;
+    currentEffectData.initHash();
+    EEPROM.put(currentEffectDataAddress, currentEffectData);
+
     Serial.print("currentEffect = ");
     Serial.println(currentEffect);
   }
