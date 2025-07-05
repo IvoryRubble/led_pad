@@ -43,8 +43,8 @@ ColorHSV customColorsHSV[customColorsCount] = {
   { h: 293, s: 80, v: 100 }
 };
 
-const int effectsCount = defaultColorsCount + customColorsCount + 10;
-int currentEffect = defaultColorsCount + customColorsCount + 9;
+const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 10;
+int currentEffect = defaultColorsCount /*+ customColorsCount*/ + 9;
 
 void setup() {
   Serial.begin(115200);
@@ -54,7 +54,7 @@ void setup() {
   struct CurrentEffectData currentEffectData;
   EEPROM.get(currentEffectDataAddress, currentEffectData);
   if (currentEffectData.isHashValid()) {
-    currentEffect = currentEffectData.currentEffect;
+    currentEffect = currentEffectData.currentEffect % effectsCount;
   }
 
   Serial.print("currentEffect = ");
@@ -121,39 +121,39 @@ void loop() {
     constColorBreathEffect(defaultColorsHSV[currentEffect]);
   }
 
-  if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
-    constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount]);
-  }
+  // if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
+  //   constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount]);
+  // }
 
   switch (currentEffect) {
-    case defaultColorsCount + customColorsCount:
-      rainbowEffect(0.7);
+    case defaultColorsCount /*+ customColorsCount*/:
+      rainbowEffect(0.6);
       break;
-    case defaultColorsCount + customColorsCount + 1:
+    case defaultColorsCount /*+ customColorsCount*/ + 1:
       rainbowEffect(1);
       break;
-    case defaultColorsCount + customColorsCount + 2:
-      rainbowBreathEffect(0.7);
+    case defaultColorsCount /*+ customColorsCount*/ + 2:
+      rainbowBreathEffect(0.6);
       break;
-    case defaultColorsCount + customColorsCount + 3:
+    case defaultColorsCount /*+ customColorsCount*/ + 3:
       rainbowBreathEffect(1);
       break;
-    case defaultColorsCount + customColorsCount + 4:
+    case defaultColorsCount /*+ customColorsCount*/ + 4:
       rainbowTwoColorsEffect(0.2, 1);
       break;
-    case defaultColorsCount + customColorsCount + 5:
+    case defaultColorsCount /*+ customColorsCount*/ + 5:
       rainbowTwoColorsEffect(0.5, 1);
       break;
-    case defaultColorsCount + customColorsCount + 6:
+    case defaultColorsCount /*+ customColorsCount*/ + 6:
       rainbowBreathTwoColorsEffect(0.2, 1);
       break;
-    case defaultColorsCount + customColorsCount + 7:
+    case defaultColorsCount /*+ customColorsCount*/ + 7:
       rainbowBreathTwoColorsEffect(0.5, 1);
       break;
-    case defaultColorsCount + customColorsCount + 8:
+    case defaultColorsCount /*+ customColorsCount*/ + 8:
       rainbowTwoColorsAperiodicEffect(1);
       break;
-    case defaultColorsCount + customColorsCount + 9:
+    case defaultColorsCount /*+ customColorsCount*/ + 9:
       rainbowBreathTwoColorsAperiodicEffect(1);
       break;
   }
