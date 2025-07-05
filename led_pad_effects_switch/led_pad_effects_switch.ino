@@ -206,16 +206,18 @@ SerialResponse readSerial() {
   if (Serial.available()) {
     int serialInput = Serial.read();
     if (serialInput == 'e') {
-      Serial.println('e');
+      Serial.print("echo id:led_pad ");  
     } else if (serialInput == 'o') {
       response.showNotification = true;
     } else {
       response.changeEffect = true;
     }
 
-    if (Serial.available()) {
-      Serial.read();
+    Serial.write(serialInput);
+    while (Serial.available()) {
+      Serial.write(Serial.read());
     }
+    Serial.println();
   }
   return response;
 }
