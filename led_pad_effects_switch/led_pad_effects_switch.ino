@@ -21,13 +21,10 @@ struct SerialResponse {
 };
 
 const int ledPin = 12;
-const int ledR1Pin = 3;
-const int ledG1Pin = 4;
-const int ledB1Pin = 5;
-const int ledR2Pin = 8;
-const int ledG2Pin = 9;
-const int ledB2Pin = 10;
-const int buttonPin = 2;
+const int ledR1Pin = 5;
+const int ledG1Pin = 9;
+const int ledB1Pin = 6;
+const int buttonPin = 8;
 
 const int defaultColorsCount = 6;
 ColorHSV defaultColorsHSV[defaultColorsCount] = {
@@ -48,8 +45,8 @@ ColorHSV customColorsHSV[customColorsCount] = {
   { h: 293, s: 80, v: 100 }
 };
 
-const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 10;
-int currentEffect = defaultColorsCount /*+ customColorsCount*/ + 9;
+const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 4;
+int currentEffect = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -73,26 +70,18 @@ void setup() {
   SoftPWMSet(ledR1Pin, 0);
   SoftPWMSet(ledG1Pin, 0);
   SoftPWMSet(ledB1Pin, 0);
-  SoftPWMSet(ledR2Pin, 0);
-  SoftPWMSet(ledG2Pin, 0);
-  SoftPWMSet(ledB2Pin, 0);
 
   pinMode(buttonPin, INPUT_PULLUP);
 
-  writeLed1({ r: 255, g: 0, b: 0 });
-  writeLed2({ r: 255, g: 0, b: 0 });
+  writeLed({ r: 255, g: 0, b: 0 });
   delay(500);
-  writeLed1({ r: 0, g: 255, b: 0 });
-  writeLed2({ r: 0, g: 255, b: 0 });
+  writeLed({ r: 0, g: 255, b: 0 });
   delay(500);
-  writeLed1({ r: 0, g: 0, b: 255 });
-  writeLed2({ r: 0, g: 0, b: 255 });
+  writeLed({ r: 0, g: 0, b: 255 });
   delay(500);
-  writeLed1({ r: 255, g: 255, b: 255 });
-  writeLed2({ r: 255, g: 255, b: 255 });
+  writeLed({ r: 255, g: 255, b: 255 });
   delay(500);
-  writeLed1({ r: 0, g: 0, b: 0 });
-  writeLed2({ r: 0, g: 0, b: 0 });
+  writeLed({ r: 0, g: 0, b: 0 });
   delay(500);
 }
 
@@ -101,17 +90,11 @@ void loop() {
   SerialResponse serialResponse = readSerial();
 
   if (isButtonPressed || serialResponse.changeEffect) {
-    writeLed(false);
-    writeLed1({ r: 0, g: 0, b: 0 });
-    writeLed2({ r: 0, g: 0, b: 0 });
+    writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
-    writeLed(true);
-    writeLed1({ r: 255, g: 255, b: 255 });
-    writeLed2({ r: 255, g: 255, b: 255 });
+    writeLed({ r: 255, g: 255, b: 255 });
     delay(50);
-    writeLed(false);
-    writeLed1({ r: 0, g: 0, b: 0 });
-    writeLed2({ r: 0, g: 0, b: 0 });
+    writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
     
     currentEffect = (currentEffect + 1) % effectsCount;
@@ -126,17 +109,11 @@ void loop() {
   }
 
   if (serialResponse.showNotification) {
-    writeLed(true);
-    writeLed1({ r: 255, g: 255, b: 255 });
-    writeLed2({ r: 255, g: 255, b: 255 });
+    writeLed({ r: 255, g: 255, b: 255 });
     delay(100);
-    writeLed(false);
-    writeLed1({ r: 0, g: 0, b: 0 });
-    writeLed2({ r: 0, g: 0, b: 0 });
+    writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
-    writeLed(true);
-    writeLed1({ r: 255, g: 255, b: 255 });
-    writeLed2({ r: 255, g: 255, b: 255 });
+    writeLed({ r: 255, g: 255, b: 255 });
     delay(100);
   }
 
@@ -161,24 +138,6 @@ void loop() {
     case defaultColorsCount /*+ customColorsCount*/ + 3:
       rainbowBreathEffect(1);
       break;
-    case defaultColorsCount /*+ customColorsCount*/ + 4:
-      rainbowTwoColorsEffect(0.2, 1);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 5:
-      rainbowTwoColorsEffect(0.5, 1);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 6:
-      rainbowBreathTwoColorsEffect(0.2, 1);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 7:
-      rainbowBreathTwoColorsEffect(0.5, 1);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 8:
-      rainbowTwoColorsAperiodicEffect(1);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 9:
-      rainbowBreathTwoColorsAperiodicEffect(1);
-      break;
   }
 
   delay(5);
@@ -197,7 +156,7 @@ void setColorFromSerial() {
     Serial.print(", b: ");
     Serial.print(b);
     Serial.println("});");
-    writeLed1({ r: r, g: g, b: b });
+    writeLed({ r: r, g: g, b: b });
   }
 }
 
@@ -223,24 +182,14 @@ SerialResponse readSerial() {
 }
 
 bool readButton() {
-  bool isButtonPressed = !digitalRead(buttonPin);
+  bool isButtonPressed = digitalRead(buttonPin);
   return isButtonPressed;
 }
 
-void writeLed(bool isLedOn) {
-  digitalWrite(ledPin, isLedOn);
-}
-
-void writeLed1(Color c) {
+void writeLed(Color c) {
   SoftPWMSet(ledR1Pin, c.r);
   SoftPWMSet(ledG1Pin, c.g);
   SoftPWMSet(ledB1Pin, c.b);
-}
-
-void writeLed2(Color c) {
-  SoftPWMSet(ledR2Pin, c.r);
-  SoftPWMSet(ledG2Pin, c.g);
-  SoftPWMSet(ledB2Pin, c.b);
 }
 
 float rainbowEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset) {
@@ -279,67 +228,25 @@ float breathX(float input) {
 
 void constColorEffect(ColorHSV c) {
   Color ledValue = hsvToRgb(c.hF(), c.sF(), c.vF());
-  writeLed1(ledValue);
-  writeLed2(ledValue);
+  writeLed(ledValue);
 }
 
 void constColorBreathEffect(ColorHSV c) {
   float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1 * c.vF(), c.vF());
   Color ledValue = hsvToRgb(c.hF(), c.sF(), effectValue);
-  writeLed1(ledValue);
-  writeLed2(ledValue);
+  writeLed(ledValue);
 }
 
 void rainbowEffect(float saturation) {
   float ledHue = rainbowEffect(millis(), 60000, 0);
   Color ledValue = hsvToRgb(ledHue, saturation, 1);
-  writeLed1(ledValue);
-  writeLed2(ledValue);
-}
-
-void rainbowTwoColorsEffect(float effectOffset, float saturation) {
-  float led1Hue = rainbowEffect(millis(), 60000, 0);
-  float led2Hue = rainbowEffect(millis(), 60000, effectOffset);
-  Color led1Value = hsvToRgb(led1Hue, saturation, 1);
-  Color led2Value = hsvToRgb(led2Hue, saturation, 1);
-  writeLed1(led1Value);
-  writeLed2(led2Value);
-}
-
-void rainbowTwoColorsAperiodicEffect(float saturation) {
-  float led1Hue = rainbowEffect(millis(), 60000, 0);
-  float led2Hue = rainbowEffect(millis(), 53000, 0);
-  Color led1Value = hsvToRgb(led1Hue, saturation, 1);
-  Color led2Value = hsvToRgb(led2Hue, saturation, 1);
-  writeLed1(led1Value);
-  writeLed2(led2Value);
+  writeLed(ledValue);
 }
 
 void rainbowBreathEffect(float saturation) {
   float ledHue = rainbowEffect(millis(), 60000, 0);
   float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1, 1);
   Color ledValue = hsvToRgb(ledHue, saturation, effectValue);
-  writeLed1(ledValue);
-  writeLed2(ledValue);
+  writeLed(ledValue);
 }
 
-void rainbowBreathTwoColorsEffect(float effectOffset, float saturation) {
-  float led1Hue = rainbowEffect(millis(), 60000, 0);
-  float led2Hue = rainbowEffect(millis(), 60000, effectOffset);
-  float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1, 1);
-  Color led1Value = hsvToRgb(led1Hue, saturation, effectValue);
-  Color led2Value = hsvToRgb(led2Hue, saturation, effectValue);
-  writeLed1(led1Value);
-  writeLed2(led2Value);
-}
-
-void rainbowBreathTwoColorsAperiodicEffect(float saturation) {
-  float led1Hue = rainbowEffect(millis(), 60000, 0);
-  float led2Hue = rainbowEffect(millis(), 53000, 0);
-  float effect1Value = breathEffect(millis(), 8000, 0, 2, 0.1, 1);
-  float effect2Value = breathEffect(millis(), 7900, 0, 2, 0.1, 1);
-  Color led1Value = hsvToRgb(led1Hue, saturation, effect1Value);
-  Color led2Value = hsvToRgb(led2Hue, saturation, effect2Value);
-  writeLed1(led1Value);
-  writeLed2(led2Value);
-}
