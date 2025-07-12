@@ -1,5 +1,4 @@
 #include <EEPROM.h>
-#include <SoftPWM.h>
 #include <math.h>
 #include "mapf.h"
 #include "color.h"
@@ -20,20 +19,21 @@ struct SerialResponse {
   bool showNotification = false;
 };
 
-const int ledPin = 12;
 const int ledR1Pin = 5;
 const int ledG1Pin = 9;
 const int ledB1Pin = 6;
 const int buttonPin = 8;
 
-const int defaultColorsCount = 6;
+const int defaultColorsCount = 8;
 ColorHSV defaultColorsHSV[defaultColorsCount] = {
+  { h: 0, s: 0, v: 0 },
   { h: 0, s: 100, v: 100 },
   { h: 120, s: 100, v: 100 },
   { h: 240, s: 100, v: 100 },
   { h: 60, s: 100, v: 100 },
   { h: 300, s: 100, v: 100 },
-  { h: 180, s: 100, v: 100 }
+  { h: 180, s: 100, v: 100 },
+  { h: 0, s: 0, v: 100 }
 };
 
 const int customColorsCount = 5;
@@ -45,7 +45,7 @@ ColorHSV customColorsHSV[customColorsCount] = {
   { h: 293, s: 80, v: 100 }
 };
 
-const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 4;
+const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 1;
 int currentEffect = 0;
 
 void setup() {
@@ -62,16 +62,14 @@ void setup() {
   Serial.print("currentEffect = ");
   Serial.println(currentEffect);
 
-  SoftPWMBegin(SOFTPWM_INVERTED);
+  pinMode(ledR1Pin, OUTPUT);
+  digitalWrite(ledR1Pin, HIGH);
+  pinMode(ledG1Pin, OUTPUT);
+  digitalWrite(ledG1Pin, HIGH);
+  pinMode(ledB1Pin, OUTPUT);
+  digitalWrite(ledB1Pin, HIGH);
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-
-  SoftPWMSet(ledR1Pin, 0);
-  SoftPWMSet(ledG1Pin, 0);
-  SoftPWMSet(ledB1Pin, 0);
-
-  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT);
 
   writeLed({ r: 255, g: 0, b: 0 });
   delay(500);
@@ -86,6 +84,9 @@ void setup() {
 }
 
 void loop() {
+  //setColorFromSerial();
+  //return;
+
   bool isButtonPressed = readButton();
   SerialResponse serialResponse = readSerial();
 
@@ -109,16 +110,16 @@ void loop() {
   }
 
   if (serialResponse.showNotification) {
+    writeLed({ r: 0, g: 0, b: 0 });
+    delay(200);
     writeLed({ r: 255, g: 255, b: 255 });
     delay(100);
     writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
-    writeLed({ r: 255, g: 255, b: 255 });
-    delay(100);
   }
 
   if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
-    constColorBreathEffect(defaultColorsHSV[currentEffect]);
+    constColorEffect(defaultColorsHSV[currentEffect]);
   }
 
   // if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
@@ -127,16 +128,7 @@ void loop() {
 
   switch (currentEffect) {
     case defaultColorsCount /*+ customColorsCount*/:
-      rainbowEffect(0.6);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 1:
-      rainbowEffect(1);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 2:
-      rainbowBreathEffect(0.6);
-      break;
-    case defaultColorsCount /*+ customColorsCount*/ + 3:
-      rainbowBreathEffect(1);
+      rainbowCustomEffect(120000);
       break;
   }
 
@@ -149,7 +141,7 @@ void setColorFromSerial() {
     int g = Serial.parseInt();
     int b = Serial.parseInt();
     Serial.parseInt();
-    Serial.print("writeLed1({r: ");
+    Serial.print("writeLed({r: ");
     Serial.print(r);
     Serial.print(", g: ");
     Serial.print(g);
@@ -187,9 +179,9 @@ bool readButton() {
 }
 
 void writeLed(Color c) {
-  SoftPWMSet(ledR1Pin, c.r);
-  SoftPWMSet(ledG1Pin, c.g);
-  SoftPWMSet(ledB1Pin, c.b);
+  analogWrite(ledR1Pin, 255 - c.r);
+  analogWrite(ledG1Pin, 255 - c.g);
+  analogWrite(ledB1Pin, 255 - c.b);
 }
 
 float rainbowEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset) {
@@ -238,7 +230,7 @@ void constColorBreathEffect(ColorHSV c) {
 }
 
 void rainbowEffect(float saturation) {
-  float ledHue = rainbowEffect(millis(), 60000, 0);
+  float ledHue = rainbowEffect(millis(), 20000, 0);
   Color ledValue = hsvToRgb(ledHue, saturation, 1);
   writeLed(ledValue);
 }
@@ -250,3 +242,64 @@ void rainbowBreathEffect(float saturation) {
   writeLed(ledValue);
 }
 
+void rainbowCustomEffect(unsigned long effectDuration) {
+  unsigned long currentTime = millis() % effectDuration;
+  float effectTime = (float)currentTime / effectDuration;
+  const int stagesCount = 22;
+  int i = floor(effectTime * stagesCount);
+  int f = (effectTime * stagesCount - i) * 256;
+  Color ledValue;
+  switch (i % stagesCount) {
+    case 0: 
+      ledValue.r = 255 - f;
+      ledValue.g = 255;
+      ledValue.b = 255;
+      break;
+    case 1 ... 4: 
+      ledValue.r = 0;
+      ledValue.g = 255;
+      ledValue.b = 255;
+      break;
+    case 5: 
+      ledValue.r = f;
+      ledValue.g = 255;
+      ledValue.b = 255 - f;
+      break;
+    case 6 ... 9: 
+      ledValue.r = 255;
+      ledValue.g = 255;
+      ledValue.b = 0;
+      break;
+    case 10: 
+      ledValue.r = 255 - f;
+      ledValue.g = 255;
+      ledValue.b = 0;
+      break;
+    case 11 ... 14: 
+      ledValue.r = 0;
+      ledValue.g = 255;
+      ledValue.b = 0;
+      break;
+    case 15: 
+      ledValue.r = f;
+      ledValue.g = 255;
+      ledValue.b = f;
+      break;
+    case 16: 
+      ledValue.r = 255;
+      ledValue.g = 255 - f;
+      ledValue.b = 255;
+      break;
+    case 17 ... 20: 
+      ledValue.r = 255;
+      ledValue.g = 0;
+      ledValue.b = 255;
+      break;
+    case 21: 
+      ledValue.r = 255;
+      ledValue.g = f;
+      ledValue.b = 255;
+      break;
+  }	
+  writeLed(ledValue);
+}
