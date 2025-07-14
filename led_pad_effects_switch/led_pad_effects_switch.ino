@@ -9,9 +9,15 @@ struct CurrentEffectData {
   int currentEffect;
   int hash;
 
-  void initHash() { hash = getHash(); }
-  bool isHashValid() { return getHash() == hash; }
-  int getHash() { return 12 + currentEffect; }
+  void initHash() {
+    hash = getHash();
+  }
+  bool isHashValid() {
+    return getHash() == hash;
+  }
+  int getHash() {
+    return 12 + currentEffect;
+  }
 };
 
 int currentEffectDataAddress = 8;
@@ -26,7 +32,7 @@ const int ledG1Pin = 9;
 const int ledB1Pin = 6;
 const int buttonPin = 8;
 
-ButtonDebounce buttonDebounce(100, 2000);
+ButtonDebounce buttonDebounce(100, 1500);
 
 const int defaultColorsCount = 8;
 ColorHSV defaultColorsHSV[defaultColorsCount] = {
@@ -51,6 +57,8 @@ ColorHSV customColorsHSV[customColorsCount] = {
 
 const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 1;
 int currentEffect = 0;
+
+bool isLedOn = true;
 
 void setup() {
   struct CurrentEffectData currentEffectData;
@@ -93,25 +101,36 @@ void loop() {
   buttonDebounce.update(digitalRead(buttonPin), millis());
   SerialResponse serialResponse = readSerial();
 
-  if (buttonDebounce.isBtnReleased || serialResponse.changeEffect) {
+  if (isLedOn) {
+    if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || serialResponse.changeEffect) {
+      currentEffect = (currentEffect + 1) % effectsCount;
+
+      struct CurrentEffectData currentEffectData;
+      currentEffectData.currentEffect = currentEffect;
+      currentEffectData.initHash();
+      EEPROM.put(currentEffectDataAddress, currentEffectData);
+
+      if (isSerialPortOpened()) {
+        Serial.print("currentEffect = ");
+        Serial.println(currentEffect);
+      }
+    }
+    if (buttonDebounce.isBtnLongPressed) {
+      isLedOn = false;
+    }
+  } else {
+    if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || buttonDebounce.isBtnLongPressed || serialResponse.changeEffect) {
+      isLedOn = true;
+    }
+  }
+
+  if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || buttonDebounce.isBtnLongPressed || serialResponse.changeEffect) {
     writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
     writeLed({ r: 255, g: 255, b: 255 });
     delay(50);
     writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
-    
-    currentEffect = (currentEffect + 1) % effectsCount;
-    
-    struct CurrentEffectData currentEffectData;
-    currentEffectData.currentEffect = currentEffect;
-    currentEffectData.initHash();
-    EEPROM.put(currentEffectDataAddress, currentEffectData);
-
-    if (isSerialPortOpened()) {
-      Serial.print("currentEffect = ");
-      Serial.println(currentEffect);
-    }
   }
 
   if (serialResponse.showNotification) {
@@ -123,19 +142,24 @@ void loop() {
     delay(100);
   }
 
-  if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
-    constColorEffect(defaultColorsHSV[currentEffect]);
+  if (isLedOn) {
+    if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
+      constColorEffect(defaultColorsHSV[currentEffect]);
+    }
+
+    // if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
+    //   constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount]);
+    // }
+
+    switch (currentEffect) {
+      case defaultColorsCount /*+ customColorsCount*/:
+        rainbowCustomEffect(120000);
+        break;
+    }
+  } else {
+    writeLed({ r: 0, g: 0, b: 0 });
   }
 
-  // if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
-  //   constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount]);
-  // }
-
-  switch (currentEffect) {
-    case defaultColorsCount /*+ customColorsCount*/:
-      rainbowCustomEffect(120000);
-      break;
-  }
 
   //delay(5);
 }
@@ -162,7 +186,7 @@ SerialResponse readSerial() {
   if (Serial.available()) {
     int serialInput = Serial.read();
     if (serialInput == 'e') {
-      Serial.print("echo id:led_pad ");  
+      Serial.print("echo id:led_pad ");
     } else if (serialInput == 'o') {
       response.showNotification = true;
     } else {
@@ -189,7 +213,7 @@ float rainbowEffect(unsigned long currentTime, unsigned long effectDuration, flo
   float effectTime = effectDuration > 0 ? (float)currentTime / effectDuration : 0;
   effectTime = effectTime + effectOffset;
   effectTime = effectTime - floor(effectTime);
-  
+
   float effectHue = effectTime;
   return effectHue;
 }
@@ -210,7 +234,7 @@ float breathEffect(unsigned long currentTime, unsigned long effectDuration, floa
 
 float breathX(float input) {
   if (input < 0.5) {
-    float output = 2 * input;  
+    float output = 2 * input;
     return output;
   } else {
     float output = 2 * (1 - input);
@@ -250,56 +274,56 @@ void rainbowCustomEffect(unsigned long effectDuration) {
   int f = (effectTime * stagesCount - i) * 256;
   Color ledValue;
   switch (i % stagesCount) {
-    case 0: 
+    case 0:
       ledValue.r = 255 - f;
       ledValue.g = 255;
       ledValue.b = 255;
       break;
-    case 1 ... 4: 
+    case 1 ... 4:
       ledValue.r = 0;
       ledValue.g = 255;
       ledValue.b = 255;
       break;
-    case 5: 
+    case 5:
       ledValue.r = f;
       ledValue.g = 255;
       ledValue.b = 255 - f;
       break;
-    case 6 ... 9: 
+    case 6 ... 9:
       ledValue.r = 255;
       ledValue.g = 255;
       ledValue.b = 0;
       break;
-    case 10: 
+    case 10:
       ledValue.r = 255 - f;
       ledValue.g = 255;
       ledValue.b = 0;
       break;
-    case 11 ... 14: 
+    case 11 ... 14:
       ledValue.r = 0;
       ledValue.g = 255;
       ledValue.b = 0;
       break;
-    case 15: 
+    case 15:
       ledValue.r = f;
       ledValue.g = 255;
       ledValue.b = f;
       break;
-    case 16: 
+    case 16:
       ledValue.r = 255;
       ledValue.g = 255 - f;
       ledValue.b = 255;
       break;
-    case 17 ... 20: 
+    case 17 ... 20:
       ledValue.r = 255;
       ledValue.g = 0;
       ledValue.b = 255;
       break;
-    case 21: 
+    case 21:
       ledValue.r = 255;
       ledValue.g = f;
       ledValue.b = 255;
       break;
-  }	
+  }
   writeLed(ledValue);
 }

@@ -25,12 +25,15 @@ class ButtonDebounce {
     bool isBtnPressed = false;
     bool isBtnReleased = false;
     bool isBtnReleasedLongPress = false;
+    
+    bool isBtnLongPressed = false;
 
     void update(bool btnStateInput, unsigned long currentTime) {
       btnStateInternal = btnStateInput;
       isBtnPressed = false;
       isBtnReleased = false;
       isBtnReleasedLongPress = false;
+      isBtnLongPressed = false;
 
       if (!debounceDelayPassed && currentTime - previousStateChangeTime >= debounceDelay) {
         debounceDelayPassed = true;
@@ -45,18 +48,20 @@ class ButtonDebounce {
         isBtnPressed = btnStateInternal;
         isBtnReleased = !btnStateInternal;
 
-        if (isBtnPressed) {
-          longPressTimeoutPassed = false;
-        }
-
         if (isBtnReleased && longPressTimeoutPassed) {
-          longPressTimeoutPassed = false;
           isBtnReleasedLongPress = true;
         }
 
         debounceDelayPassed = false;
+        longPressTimeoutPassed = false;
+        isButtonLongPressedEventTriggered = false;
         previousStateChangeTime = currentTime;
         previousState = btnStateInternal;
+      }
+
+      if (btnState && longPressTimeoutPassed && !isButtonLongPressedEventTriggered) {
+        isBtnLongPressed = true;
+        isButtonLongPressedEventTriggered = true;
       }
     }
   private:
@@ -70,6 +75,8 @@ class ButtonDebounce {
 
     bool btnStateInternal = false;
     bool previousState = false;
+
+    bool isButtonLongPressedEventTriggered = false;
 };
 
 #endif
