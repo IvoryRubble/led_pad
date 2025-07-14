@@ -2,6 +2,8 @@
 #include <math.h>
 #include "mapf.h"
 #include "color.h"
+#include "isSerialPortOpened.h"
+#include "buttonDebounce.h"
 
 struct CurrentEffectData {
   int currentEffect;
@@ -23,6 +25,8 @@ const int ledR1Pin = 5;
 const int ledG1Pin = 9;
 const int ledB1Pin = 6;
 const int buttonPin = 8;
+
+ButtonDebounce buttonDebounce(100, 2000);
 
 const int defaultColorsCount = 8;
 ColorHSV defaultColorsHSV[defaultColorsCount] = {
@@ -49,16 +53,15 @@ const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 1;
 int currentEffect = 0;
 
 void setup() {
-  Serial.begin(115200);
-  delay(2000);
-  Serial.println("Begin...");
-
   struct CurrentEffectData currentEffectData;
   EEPROM.get(currentEffectDataAddress, currentEffectData);
   if (currentEffectData.isHashValid()) {
     currentEffect = currentEffectData.currentEffect % effectsCount;
   }
 
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("Begin...");
   Serial.print("currentEffect = ");
   Serial.println(currentEffect);
 
@@ -87,10 +90,10 @@ void loop() {
   //setColorFromSerial();
   //return;
 
-  bool isButtonPressed = readButton();
+  buttonDebounce.update(digitalRead(buttonPin), millis());
   SerialResponse serialResponse = readSerial();
 
-  if (isButtonPressed || serialResponse.changeEffect) {
+  if (buttonDebounce.isBtnReleased || serialResponse.changeEffect) {
     writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
     writeLed({ r: 255, g: 255, b: 255 });
@@ -105,8 +108,10 @@ void loop() {
     currentEffectData.initHash();
     EEPROM.put(currentEffectDataAddress, currentEffectData);
 
-    Serial.print("currentEffect = ");
-    Serial.println(currentEffect);
+    if (isSerialPortOpened()) {
+      Serial.print("currentEffect = ");
+      Serial.println(currentEffect);
+    }
   }
 
   if (serialResponse.showNotification) {
@@ -132,7 +137,7 @@ void loop() {
       break;
   }
 
-  delay(5);
+  //delay(5);
 }
 
 void setColorFromSerial() {
@@ -171,11 +176,6 @@ SerialResponse readSerial() {
     Serial.println();
   }
   return response;
-}
-
-bool readButton() {
-  bool isButtonPressed = digitalRead(buttonPin);
-  return isButtonPressed;
 }
 
 void writeLed(Color c) {
