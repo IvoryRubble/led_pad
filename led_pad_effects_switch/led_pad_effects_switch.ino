@@ -5,8 +5,27 @@
 #include "isSerialPortOpened.h"
 #include "buttonDebounce.h"
 
+int currentEffectDataAddress = 8;
+
+struct ColorData {
+  ColorHSV color;
+  unsigned long breathDuration;
+  float breathDeep;
+};
+
+struct SerialResponse {
+  bool changeEffect = false;
+  bool showNotification = false;
+  bool ledOn = false;
+  bool ledOff = false;
+  bool isCustomColor = false;
+  ColorData customColor;
+};
+
 struct CurrentEffectData {
   int currentEffect;
+  bool isCustomColor;
+  ColorData customColor;
   int hash;
 
   void initHash() {
@@ -16,15 +35,8 @@ struct CurrentEffectData {
     return getHash() == hash;
   }
   int getHash() {
-    return 12 + currentEffect;
+    return 15 + currentEffect + isCustomColor + customColor.color.h + customColor.color.s + customColor.color.v;
   }
-};
-
-int currentEffectDataAddress = 8;
-
-struct SerialResponse {
-  bool changeEffect = false;
-  bool showNotification = false;
 };
 
 const int ledR1Pin = 5;
@@ -35,28 +47,27 @@ const int buttonPin = 8;
 ButtonDebounce buttonDebounce(100, 1500);
 
 const int defaultColorsCount = 8;
-ColorHSV defaultColorsHSV[defaultColorsCount] = {
-  { h: 0, s: 0, v: 0 },
-  { h: 0, s: 100, v: 100 },
-  { h: 120, s: 100, v: 100 },
-  { h: 240, s: 100, v: 100 },
-  { h: 60, s: 100, v: 100 },
-  { h: 300, s: 100, v: 100 },
-  { h: 180, s: 100, v: 100 },
-  { h: 0, s: 0, v: 100 }
+ColorData defaultColorsHSV[defaultColorsCount] = {
+  { color: { h: 0, s: 0, v: 0 }, breathDuration: 0, breathDeep: 0 },
+  { color: { h: 0, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.6 },
+  { color: { h: 120, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.5 },
+  { color: { h: 240, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.5 },
+  { color: { h: 60, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.4 },
+  { color: { h: 300, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.4 },
+  { color: { h: 180, s: 100, v: 100 }, breathDuration: 4000, breathDeep: 1.0 },
+  { color: { h: 0, s: 0, v: 100 }, breathDuration: 0, breathDeep: 0 }
 };
 
-const int customColorsCount = 5;
-ColorHSV customColorsHSV[customColorsCount] = {
-  { h: 17, s: 84, v: 100 },
-  { h: 90, s: 80, v: 100 },
-  { h: 57, s: 95, v: 100 },
-  { h: 0, s: 22, v: 100 },
-  { h: 293, s: 80, v: 100 }
+const int customColorsCount = 1;
+ColorData customColorsHSV[customColorsCount] = {
+  { color: { h: 348, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.25 }
 };
 
-const int effectsCount = defaultColorsCount /*+ customColorsCount*/ + 1;
+const int effectsCount = defaultColorsCount + customColorsCount + 2;
 int currentEffect = 0;
+
+bool isCustomColor = false;
+ColorData customColor;
 
 bool isLedOn = true;
 
@@ -65,6 +76,8 @@ void setup() {
   EEPROM.get(currentEffectDataAddress, currentEffectData);
   if (currentEffectData.isHashValid()) {
     currentEffect = currentEffectData.currentEffect % effectsCount;
+    isCustomColor = currentEffectData.isCustomColor;
+    customColor = currentEffectData.customColor;
   }
 
   Serial.begin(115200);
@@ -104,27 +117,46 @@ void loop() {
   if (isLedOn) {
     if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || serialResponse.changeEffect) {
       currentEffect = (currentEffect + 1) % effectsCount;
+      isCustomColor = false;
 
-      struct CurrentEffectData currentEffectData;
-      currentEffectData.currentEffect = currentEffect;
-      currentEffectData.initHash();
-      EEPROM.put(currentEffectDataAddress, currentEffectData);
+      saveCurrentEffectData();
 
       if (isSerialPortOpened()) {
         Serial.print("currentEffect = ");
         Serial.println(currentEffect);
       }
     }
-    if (buttonDebounce.isBtnLongPressed) {
+    if (buttonDebounce.isBtnLongPressed || serialResponse.ledOff) {
       isLedOn = false;
     }
   } else {
-    if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || buttonDebounce.isBtnLongPressed || serialResponse.changeEffect) {
+    if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || buttonDebounce.isBtnLongPressed || serialResponse.changeEffect || serialResponse.ledOn) {
       isLedOn = true;
     }
   }
 
-  if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || buttonDebounce.isBtnLongPressed || serialResponse.changeEffect) {
+  if (serialResponse.isCustomColor) {
+    isLedOn = true;
+    isCustomColor = true;
+    customColor = serialResponse.customColor;
+
+    if (isSerialPortOpened()) {
+      Serial.print("customColor: ");
+      Serial.print(customColor.color.h);
+      Serial.print(" ");
+      Serial.print(customColor.color.s);
+      Serial.print(" ");
+      Serial.print(customColor.color.v);
+      Serial.print(" ");
+      Serial.print(customColor.breathDuration);
+      Serial.print(" ");
+      Serial.println(customColor.breathDeep);
+    }
+
+    saveCurrentEffectData();
+  }
+
+  if ((buttonDebounce.isBtnReleased && !buttonDebounce.isBtnReleasedLongPress) || buttonDebounce.isBtnLongPressed || serialResponse.changeEffect || serialResponse.ledOn || serialResponse.ledOff) {
     writeLed({ r: 0, g: 0, b: 0 });
     delay(100);
     writeLed({ r: 255, g: 255, b: 255 });
@@ -134,8 +166,10 @@ void loop() {
   }
 
   if (serialResponse.showNotification) {
+    writeLed({ r: 255, g: 255, b: 255 });
+    delay(100);
     writeLed({ r: 0, g: 0, b: 0 });
-    delay(200);
+    delay(100);
     writeLed({ r: 255, g: 255, b: 255 });
     delay(100);
     writeLed({ r: 0, g: 0, b: 0 });
@@ -143,23 +177,30 @@ void loop() {
   }
 
   if (isLedOn) {
-    if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
-      constColorEffect(defaultColorsHSV[currentEffect]);
-    }
+    if (isCustomColor) {
+      constColorBreathEffect(customColor.color, customColor.breathDuration, customColor.breathDeep);
+    } else {
+      if (currentEffect >= 0 && currentEffect < defaultColorsCount) {
+        constColorBreathEffect(defaultColorsHSV[currentEffect].color, defaultColorsHSV[currentEffect].breathDuration, defaultColorsHSV[currentEffect].breathDeep);
+      }
 
-    // if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
-    //   constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount]);
-    // }
+      if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
+        constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount].color, customColorsHSV[currentEffect - defaultColorsCount].breathDuration, customColorsHSV[currentEffect - defaultColorsCount].breathDeep);
 
-    switch (currentEffect) {
-      case defaultColorsCount /*+ customColorsCount*/:
-        rainbowCustomEffect(120000);
-        break;
+      }
+
+      switch (currentEffect) {
+        case defaultColorsCount + customColorsCount:
+          rainbowCustomEffect(120000);
+          break;
+        case defaultColorsCount + customColorsCount + 1:
+          constColorBreathEffect(customColor.color, customColor.breathDuration, customColor.breathDeep);
+          break;
+      }
     }
   } else {
     writeLed({ r: 0, g: 0, b: 0 });
   }
-
 
   //delay(5);
 }
@@ -181,6 +222,15 @@ void setColorFromSerial() {
   }
 }
 
+void saveCurrentEffectData() {
+  struct CurrentEffectData currentEffectData;
+  currentEffectData.currentEffect = currentEffect;
+  currentEffectData.isCustomColor = isCustomColor;
+  currentEffectData.customColor = customColor;
+  currentEffectData.initHash();
+  EEPROM.put(currentEffectDataAddress, currentEffectData);
+}
+
 SerialResponse readSerial() {
   SerialResponse response;
   if (Serial.available()) {
@@ -189,6 +239,34 @@ SerialResponse readSerial() {
       Serial.print("echo id:led_pad ");
     } else if (serialInput == 'o') {
       response.showNotification = true;
+    } else if (serialInput == 'L') {
+      response.ledOn = true;
+    } else if (serialInput == 'l') {
+      response.ledOff = true;
+    } else if (serialInput == 'C') {
+      response.isCustomColor = true;
+      response.customColor.color.h = Serial.parseInt();
+      response.customColor.color.s = Serial.parseInt();
+      response.customColor.color.v = Serial.parseInt();
+      response.customColor.breathDuration = Serial.parseInt();
+      response.customColor.breathDeep = Serial.parseFloat();
+    } else if (serialInput == 'c') {
+      Serial.print(isLedOn);
+      Serial.print(" ");
+      Serial.print(currentEffect);
+      Serial.print(" ");
+      Serial.print(isCustomColor);
+      Serial.print(" ");
+      Serial.print(customColor.color.h);
+      Serial.print(" ");
+      Serial.print(customColor.color.s);
+      Serial.print(" ");
+      Serial.print(customColor.color.v);
+      Serial.print(" ");
+      Serial.print(customColor.breathDuration);
+      Serial.print(" ");
+      Serial.print(customColor.breathDeep);
+      Serial.print(" ");
     } else {
       response.changeEffect = true;
     }
@@ -218,15 +296,15 @@ float rainbowEffect(unsigned long currentTime, unsigned long effectDuration, flo
   return effectHue;
 }
 
-float breathEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset, float breathDeep, float valueMin, float valueMax) {
+float breathEffect(unsigned long currentTime, unsigned long effectDuration, float effectOffset, int breathDeep, float valueMin, float valueMax) {
   currentTime = currentTime % effectDuration;
   float effectTime = effectDuration > 0 ? (float)currentTime / effectDuration : 0;
   effectTime = effectTime + effectOffset;
   effectTime = effectTime - floor(effectTime);
 
-  float effectValue = 1;
+  float effectValue = breathX(effectTime);
   for (int i = 0; i < breathDeep; i++) {
-    effectValue = breathX(effectTime);
+    effectValue = effectValue * effectValue;
   }
   effectValue = mapf(effectValue, 0, 1, valueMin, valueMax);
   return effectValue;
@@ -247,9 +325,9 @@ void constColorEffect(ColorHSV c) {
   writeLed(ledValue);
 }
 
-void constColorBreathEffect(ColorHSV c) {
-  float effectValue = breathEffect(millis(), 8000, 0, 2, 0.1 * c.vF(), c.vF());
-  Color ledValue = hsvToRgb(c.hF(), c.sF(), effectValue);
+void constColorBreathEffect(ColorHSV c, unsigned long breathDuration, float breathDeep) {
+  float effectValue = breathEffect(millis(), breathDuration, 0, 1, c.sF(), (1 - breathDeep) * c.sF());
+  Color ledValue = hsvToRgb(c.hF(), effectValue, c.vF());
   writeLed(ledValue);
 }
 
@@ -325,5 +403,8 @@ void rainbowCustomEffect(unsigned long effectDuration) {
       ledValue.b = 255;
       break;
   }
+
+  //float breathEffectValue = breathEffect(millis(), 8000, 0, 1, c.sF(), 0.85 * c.sF());
+
   writeLed(ledValue);
 }
