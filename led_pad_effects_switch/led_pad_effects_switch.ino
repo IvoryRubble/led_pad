@@ -1,3 +1,19 @@
+// Firmware for led mousepad
+// Press button for change effect
+// Hold button for switch off light
+// Available serial port commands:
+// e - echo
+// o - show notification by flashing light
+// L - switch on light
+// l - switch off light
+// c - show current status
+//  status output format:
+//  {isLedOn} {currentEffect} {isCustomColor} {customColor.color.h} {customColor.color.s} {customColor.color.v} {customColor.breathDuration} {customColor.breathDeep}
+// C - write custom effect
+//  custom effect format:
+//  {customColor.color.h} {customColor.color.s} {customColor.color.v} {customColor.breathDuration} {customColor.breathDeep}
+// Any other input changes current effect
+
 #include <EEPROM.h>
 #include <math.h>
 #include "mapf.h"
@@ -82,7 +98,24 @@ void setup() {
 
   Serial.begin(115200);
   delay(2000);
-  Serial.println("Begin...");
+  Serial.println("Please stand by...  \n");
+  delay(2000);
+  Serial.println(F(
+    "Firmware for led mousepad  \n"
+    "Press button for change effect  \n"
+    "Hold button for switch off light  \n"
+    "Available serial port commands:  \n"
+    "e - echo  \n"
+    "o - show notification by flashing light  \n"
+    "L - switch on light  \n"
+    "l - switch off light  \n"
+    "c - show current status  \n"
+    "   status output format:  \n"
+    "   {isLedOn} {currentEffect} {isCustomColor} {customColor.color.h} {customColor.color.s} {customColor.color.v} {customColor.breathDuration} {customColor.breathDeep}  \n"
+    "C - write custom effect  \n"
+    "   custom effect format:  \n"
+    "   {customColor.color.h} {customColor.color.s} {customColor.color.v} {customColor.breathDuration} {customColor.breathDeep}  \n"
+    "Any other input changes current effect  \n"));
   Serial.print("currentEffect = ");
   Serial.println(currentEffect);
 
@@ -186,7 +219,6 @@ void loop() {
 
       if (currentEffect >= defaultColorsCount && currentEffect < customColorsCount + defaultColorsCount) {
         constColorBreathEffect(customColorsHSV[currentEffect - defaultColorsCount].color, customColorsHSV[currentEffect - defaultColorsCount].breathDuration, customColorsHSV[currentEffect - defaultColorsCount].breathDeep);
-
       }
 
       switch (currentEffect) {
@@ -234,15 +266,18 @@ void saveCurrentEffectData() {
 SerialResponse readSerial() {
   SerialResponse response;
   if (Serial.available()) {
-    int serialInput = Serial.read();
+    char serialInput = Serial.read();
     if (serialInput == 'e') {
-      Serial.print("echo id:led_pad ");
+      Serial.println("echo id:led_pad");
     } else if (serialInput == 'o') {
       response.showNotification = true;
+      Serial.println(serialInput);
     } else if (serialInput == 'L') {
       response.ledOn = true;
+      Serial.println(serialInput);
     } else if (serialInput == 'l') {
       response.ledOff = true;
+      Serial.println(serialInput);
     } else if (serialInput == 'C') {
       response.isCustomColor = true;
       response.customColor.color.h = Serial.parseInt();
@@ -250,6 +285,7 @@ SerialResponse readSerial() {
       response.customColor.color.v = Serial.parseInt();
       response.customColor.breathDuration = Serial.parseInt();
       response.customColor.breathDeep = Serial.parseFloat();
+      Serial.println(serialInput);
     } else if (serialInput == 'c') {
       Serial.print(isLedOn);
       Serial.print(" ");
@@ -265,17 +301,17 @@ SerialResponse readSerial() {
       Serial.print(" ");
       Serial.print(customColor.breathDuration);
       Serial.print(" ");
-      Serial.print(customColor.breathDeep);
-      Serial.print(" ");
+      Serial.println(customColor.breathDeep);
     } else {
       response.changeEffect = true;
     }
 
-    Serial.write(serialInput);
+    // Serial.write(serialInput);
     while (Serial.available()) {
-      Serial.write(Serial.read());
+      // Serial.write(Serial.read());
+      Serial.read();
     }
-    Serial.println();
+    // Serial.println();
   }
   return response;
 }
@@ -404,7 +440,7 @@ void rainbowCustomEffect(unsigned long effectDuration) {
       break;
   }
 
-  float breathDeep = 0.6; 
+  float breathDeep = 0.6;
   float breathEffectValue = breathEffect(millis(), 6000, 0, 1, 1, 1 - breathDeep);
 
   ledValue.r = (1 - breathEffectValue) * 255 + ledValue.r * breathEffectValue;
