@@ -79,7 +79,7 @@ ColorData customColorsHSV[customColorsCount] = {
   { color: { h: 348, s: 100, v: 100 }, breathDuration: 8000, breathDeep: 0.25 }
 };
 
-const int effectsCount = defaultColorsCount + customColorsCount + 2;
+const int effectsCount = defaultColorsCount + customColorsCount + 3;
 int currentEffect = 0;
 
 bool isCustomColor = false;
@@ -223,9 +223,12 @@ void loop() {
 
       switch (currentEffect) {
         case defaultColorsCount + customColorsCount:
-          rainbowCustomEffect(240000);
+          rainbowEffect(1);
           break;
         case defaultColorsCount + customColorsCount + 1:
+          rainbowCustomEffect(240000);
+          break;
+        case defaultColorsCount + customColorsCount + 2:
           constColorBreathEffect(customColor.color, customColor.breathDuration, customColor.breathDeep);
           break;
       }
