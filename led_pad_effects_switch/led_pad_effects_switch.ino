@@ -191,7 +191,7 @@ void loop() {
 
       switch (currentEffect) {
         case defaultColorsCount + customColorsCount:
-          rainbowCustomEffect(120000);
+          rainbowCustomEffect(240000);
           break;
         case defaultColorsCount + customColorsCount + 1:
           constColorBreathEffect(customColor.color, customColor.breathDuration, customColor.breathDeep);
@@ -347,7 +347,7 @@ void rainbowBreathEffect(float saturation) {
 void rainbowCustomEffect(unsigned long effectDuration) {
   unsigned long currentTime = millis() % effectDuration;
   float effectTime = (float)currentTime / effectDuration;
-  const int stagesCount = 22;
+  const int stagesCount = 29;
   int i = floor(effectTime * stagesCount);
   int f = (effectTime * stagesCount - i) * 256;
   Color ledValue;
@@ -357,54 +357,59 @@ void rainbowCustomEffect(unsigned long effectDuration) {
       ledValue.g = 255;
       ledValue.b = 255;
       break;
-    case 1 ... 4:
+    case 1 ... 2:
       ledValue.r = 0;
       ledValue.g = 255;
       ledValue.b = 255;
       break;
-    case 5:
+    case 3:
       ledValue.r = f;
       ledValue.g = 255;
       ledValue.b = 255 - f;
       break;
-    case 6 ... 9:
+    case 4 ... 10:
       ledValue.r = 255;
       ledValue.g = 255;
       ledValue.b = 0;
       break;
-    case 10:
+    case 11:
       ledValue.r = 255 - f;
       ledValue.g = 255;
       ledValue.b = 0;
       break;
-    case 11 ... 14:
+    case 12 ... 18:
       ledValue.r = 0;
       ledValue.g = 255;
       ledValue.b = 0;
       break;
-    case 15:
+    case 19:
       ledValue.r = f;
       ledValue.g = 255;
       ledValue.b = f;
       break;
-    case 16:
+    case 20:
       ledValue.r = 255;
       ledValue.g = 255 - f;
       ledValue.b = 255;
       break;
-    case 17 ... 20:
+    case 21 ... 27:
       ledValue.r = 255;
       ledValue.g = 0;
       ledValue.b = 255;
       break;
-    case 21:
+    case 28:
       ledValue.r = 255;
       ledValue.g = f;
       ledValue.b = 255;
       break;
   }
 
-  //float breathEffectValue = breathEffect(millis(), 8000, 0, 1, c.sF(), 0.85 * c.sF());
+  float breathDeep = 0.6; 
+  float breathEffectValue = breathEffect(millis(), 6000, 0, 1, 1, 1 - breathDeep);
+
+  ledValue.r = (1 - breathEffectValue) * 255 + ledValue.r * breathEffectValue;
+  ledValue.g = (1 - breathEffectValue) * 255 + ledValue.g * breathEffectValue;
+  ledValue.b = (1 - breathEffectValue) * 255 + ledValue.b * breathEffectValue;
 
   writeLed(ledValue);
 }
